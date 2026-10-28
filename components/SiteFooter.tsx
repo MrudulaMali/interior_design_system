@@ -1,0 +1,1 @@
+export default function SiteFooter(){return <footer className="footer"><div className="footerbrand">⌂ InteriorFinder</div><div>Transforming Spaces, Enriching Lives</div><small>© 2026 InteriorFinder · Find the right designer for your dream space.</small></footer>}
