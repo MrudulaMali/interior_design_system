@@ -10,39 +10,38 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. Protected areas: Admin panel, dashboards, designer onboarding & profile editor
+  // 2. Protected paths requiring authentication
   const isProtectedPath =
     pathname.startsWith("/admin") ||
-    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/customer") ||
+    pathname.startsWith("/designer/dashboard") ||
     pathname.startsWith("/designer/onboarding") ||
     pathname.startsWith("/designer/profile") ||
-    pathname.startsWith("/choose-journey");
+    pathname.startsWith("/dashboard");
 
   if (isProtectedPath && !sessionToken) {
-    // If attempting to access /admin, redirect to /admin/login
     if (pathname.startsWith("/admin")) {
       const adminLoginUrl = new URL("/admin/login", request.url);
       adminLoginUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(adminLoginUrl);
     }
 
-    // Otherwise redirect to general /login
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // 3. All other routes are public by default:
-  // '/', '/designers', '/designer/:id', '/portfolio', '/enquiry', '/login', '/register', '/api/...'
+  // 3. Public paths: '/', '/designers', '/designer/:id', '/portfolio', '/enquiry', '/login', '/register'
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
     "/admin/:path*",
-    "/dashboard/:path*",
+    "/customer/:path*",
+    "/designer/dashboard/:path*",
     "/designer/onboarding/:path*",
     "/designer/profile/:path*",
-    "/choose-journey/:path*",
+    "/dashboard/:path*",
   ],
 };

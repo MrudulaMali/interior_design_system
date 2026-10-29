@@ -168,14 +168,14 @@ export async function POST(request: NextRequest) {
     // Create session in PostgreSQL and set HttpOnly cookie
     await createSession(user.id);
 
-    // Determine redirect URL based on database role
-    let redirectUrl = "/dashboard";
+    // Determine redirect URL based on verified database role
+    let redirectUrl = "/customer/dashboard";
     if (user.role === "admin") {
-      redirectUrl = "/admin";
+      redirectUrl = "/admin/dashboard";
     } else if (user.role === "designer") {
-      redirectUrl = "/dashboard";
+      redirectUrl = "/designer/dashboard";
     } else {
-      redirectUrl = "/dashboard";
+      redirectUrl = "/customer/dashboard";
     }
 
     return NextResponse.json(

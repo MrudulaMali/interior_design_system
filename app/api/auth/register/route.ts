@@ -75,11 +75,16 @@ export async function POST(request: NextRequest) {
     // Establish authenticated session
     await createSession(newUser.id);
 
+    const redirectUrl =
+      newUser.role === "designer"
+        ? "/designer/dashboard"
+        : "/customer/dashboard";
+
     return NextResponse.json(
       {
         message: "Account created successfully.",
         user: newUser,
-        redirectUrl: "/dashboard",
+        redirectUrl,
       },
       { status: 201 }
     );

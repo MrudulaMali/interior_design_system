@@ -7,10 +7,10 @@ import {
   pgEnum,
   jsonb,
   integer,
-  boolean,
+  
   boolean,
   numeric,
-  integer,
+
 } from "drizzle-orm/pg-core";
 
 export const enquiryStatusEnum = pgEnum("enquiry_status", [
