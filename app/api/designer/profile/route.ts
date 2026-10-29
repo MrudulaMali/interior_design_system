@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { designerProfiles, portfolioProjects, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -71,8 +72,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Profile status: draft or pending review
-    const targetStatus = isDraft ? "draft" : "pending";
+    // Check user account status
+    const [userRecord] = await db
+      .select({ status: users.status, role: users.role })
+      .from(users)
+      .where(eq(users.id, currentUser.id))
+      .limit(1);
+
+    if (userRecord?.status === "suspended") {
+      return NextResponse.json(
+        { error: "This account has been suspended. Please contact support." },
+        { status: 403 }
+      );
+    }
 
     // Check if profile already exists for this user
     const [existingProfile] = await db
@@ -80,6 +92,20 @@ export async function POST(request: NextRequest) {
       .from(designerProfiles)
       .where(eq(designerProfiles.userId, currentUser.id))
       .limit(1);
+
+    // Controlled status transition:
+    // - Designers can never self-assign 'approved'.
+    // - Draft saves as 'draft' (hidden from public).
+    // - Submissions from draft or resubmissions after rejection become 'pending'.
+    // - Existing approved designers retain approval on routine edits.
+    let targetStatus: string;
+    if (isDraft) {
+      targetStatus = "draft";
+    } else if (existingProfile?.status === "approved") {
+      targetStatus = "approved";
+    } else {
+      targetStatus = "pending";
+    }
 
     let savedProfileId: number;
 
@@ -102,6 +128,7 @@ export async function POST(request: NextRequest) {
           profileImage: typeof profileImage === "string" ? profileImage.trim() : null,
           startingBudget: typeof startingBudget === "string" ? startingBudget.trim() : null,
           status: targetStatus,
+          rejectionReason: targetStatus === "pending" ? null : undefined,
           updatedAt: new Date(),
         })
         .where(eq(designerProfiles.id, existingProfile.id))
@@ -176,11 +203,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Purge caches on profile update
+    try {
+      revalidatePath("/");
+      revalidatePath("/designers");
+      revalidatePath("/portfolio");
+      revalidatePath(`/designer/${savedProfileId}`);
+    } catch (err) {
+      console.error("Cache revalidation error:", err);
+    }
+
     return NextResponse.json({
       message:
         targetStatus === "draft"
           ? "Profile draft saved successfully."
-          : "Profile submitted for administrator approval.",
+          : targetStatus === "approved"
+            ? "Profile updated successfully."
+            : "Profile submitted for administrator approval.",
       profileId: savedProfileId,
       status: targetStatus,
     });

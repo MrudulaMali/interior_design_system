@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { designerProfiles, users } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
@@ -61,11 +62,21 @@ export async function PATCH(request: NextRequest) {
       .update(designerProfiles)
       .set({
         status,
-        rejectionReason: rejectionReason || null,
+        rejectionReason: status === "rejected" ? (rejectionReason || "Please update your portfolio details and re-submit.") : null,
         updatedAt: new Date(),
       })
       .where(eq(designerProfiles.id, profileId))
       .returning();
+
+    // Revalidate all public sections immediately so approved/rejected changes reflect everywhere
+    try {
+      revalidatePath("/");
+      revalidatePath("/designers");
+      revalidatePath("/portfolio");
+      revalidatePath(`/designer/${profileId}`);
+    } catch (err) {
+      console.error("Cache revalidation error:", err);
+    }
 
     return NextResponse.json({
       message: `Designer profile marked as ${status}.`,

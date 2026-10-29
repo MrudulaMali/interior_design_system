@@ -430,7 +430,16 @@ export default function AdminDashboard() {
                         </td>
                         <td>{new Date(d.createdAt).toLocaleDateString()}</td>
                         <td>
-                          <div style={{ display: "flex", gap: "6px" }}>
+                          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                            <a
+                              href={`/designer/${d.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="outline-btn btn-small"
+                              style={{ fontSize: "10px", padding: "4px 8px" }}
+                            >
+                              Preview ↗
+                            </a>
                             {d.status !== "approved" && (
                               <button
                                 onClick={() => void updateDesignerStatus(d.id, "approved")}
