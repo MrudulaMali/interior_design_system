@@ -370,3 +370,143 @@
   }
 }
 
+
+/* Admin Sidebar UI - styling only */
+.dash-sidebar {
+  background: #0c4037;
+  color: #ffffff;
+  padding: 24px 14px;
+}
+
+/* Admin profile section */
+.dash-sidebar .dash-user {
+  padding: 0 10px 24px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+.dash-sidebar .dash-user b {
+  display: block;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.dash-sidebar .dash-user small {
+  display: block;
+  color: #d1e5dc;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+/* Sidebar menu buttons */
+.dash-sidebar > button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  margin: 4px 0;
+  border-radius: 8px;
+  color: #e7f1e9;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+/* Menu icons */
+.dash-sidebar > button span {
+  min-width: 18px;
+  font-size: 16px;
+}
+
+/* Hover effect */
+.dash-sidebar > button:hover {
+  background: #14594c !important;
+  color: #ffffff;
+}
+
+/* Selected menu */
+.dash-sidebar > button.active {
+  background: #e7f1e9 !important;
+  color: #0c4037;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Back to website */
+.dash-sidebar .sidebar-bottom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  color: #e7f1e9;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.dash-sidebar .sidebar-bottom:hover {
+  color: #ffffff;
+  background: #14594c;
+  border-radius: 8px;
+}
+
+
+/* Overall font size improvement */
+html {
+  font-size: 17px;
+}
+
+body {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* Headings */
+h1 {
+  font-size: 2.2rem;
+}
+
+h2 {
+  font-size: 1.7rem;
+}
+
+h3 {
+  font-size: 1.35rem;
+}
+
+/* Paragraphs and general text */
+p {
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+/* Navigation links */
+.topbar nav a {
+  font-size: 15px;
+}
+
+/* Sidebar menu */
+.dash-sidebar > a,
+.dash-sidebar > button {
+  font-size: 14px;
+}
+
+/* Small labels and helper text */
+small {
+  font-size: 12px;
+}
+
+/* Form controls */
+input,
+select,
+textarea,
+button {
+  font-size: 14px;
+}
+
