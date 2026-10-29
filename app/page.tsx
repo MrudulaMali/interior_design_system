@@ -1,34 +1,20 @@
-
 import Link from "next/link";
-
-import { db } from "@/db";
-import { designers } from "@/db/schema";
-import { desc } from "drizzle-orm";
 import { Suspense } from "react";
-
-const designerImages = [
-  "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=800&q=80",
-];
+import { getApprovedDesigners } from "@/lib/designers";
 
 const rooms = ["Living Room", "Bedroom", "Kitchen", "Office"];
 
 export default function Home() {
   return (
-    <Suspense fallback={<p>Loading designers...</p>}>
+    <Suspense fallback={<div style={{ textAlign: "center", padding: "40px" }}>Loading designers...</div>}>
       <HomeContent />
     </Suspense>
   );
 }
 
 async function HomeContent() {
-  const featuredDesigners = await db
-    .select()
-    .from(designers)
-    .orderBy(desc(designers.createdAt))
-    .limit(4);
+  // Authoritative query: retrieves approved designers dynamically
+  const featuredDesigners = await getApprovedDesigners(4);
 
   return (
     <>
@@ -100,55 +86,58 @@ async function HomeContent() {
           </Link>
         </div>
 
-        
-<div className="designer-grid">
-  {featuredDesigners.map((designer) => (
-    <article className="designer-card" key={designer.id}>
-      <div className="designer-photo">
-        {designer.profileImage ? (
-          <img
-            src={designer.profileImage}
-            alt={`${designer.fullName} interior design`}
-          />
-        ) : (
-          <div className="designer-image-placeholder">
-            Interior Designer
-          </div>
-        )}
+        <div className="designer-grid">
+          {featuredDesigners.map((designer) => (
+            <article className="designer-card" key={designer.id}>
+              <div className="designer-photo" style={{ backgroundImage: designer.image ? `url(${designer.image})` : undefined, backgroundSize: "cover", backgroundPosition: "center" }}>
+                {!designer.image && (
+                  <div
+                    style={{
+                      height: "100%",
+                      display: "grid",
+                      placeItems: "center",
+                      color: "var(--muted)",
+                      fontSize: "12px",
+                      background: "var(--mint)",
+                    }}
+                  >
+                    Interior Studio
+                  </div>
+                )}
 
-        {designer.isVerified && (
-          <span className="verified">✓ Verified</span>
-        )}
-      </div>
+                {designer.isVerified && (
+                  <span className="verified">✓ Verified</span>
+                )}
+              </div>
 
-      <div className="card-body">
-        <div className="card-title">
-          <h3>{designer.fullName}</h3>
-          <span>★ {designer.rating}</span>
+              <div className="card-body">
+                <div className="card-title">
+                  <h3>{designer.name}</h3>
+                  <span>★ {designer.rating}</span>
+                </div>
+
+                <p>{designer.style}</p>
+
+                <small>
+                  ⌖ {designer.city} · {designer.experienceYears}+ years experience
+                </small>
+
+                <Link
+                  className="outline-btn"
+                  href={`/designer/${designer.id}`}
+                >
+                  View Profile
+                </Link>
+              </div>
+            </article>
+          ))}
         </div>
 
-        <p>{designer.designStyle}</p>
-
-        <small>
-          ⌖ {designer.city} · {designer.experienceYears}+
-          years experience
-        </small>
-
-        <Link
-          className="outline-btn"
-          href={`/designer/${designer.id}`}
-        >
-          View Profile
-        </Link>
-      </div>
-    </article>
-  ))}
-</div>
-
-{featuredDesigners.length === 0 && (
-  <p>No designers have been added yet.</p>
-)}
-
+        {featuredDesigners.length === 0 && (
+          <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}>
+            <p>No approved designers yet. New designer profiles will appear once approved by admin.</p>
+          </div>
+        )}
       </section>
 
       <section className="section services">
@@ -162,7 +151,7 @@ async function HomeContent() {
         <div className="service-grid">
           {rooms.map((room, index) => (
             <Link
-              href="/designers"
+              href={`/designers`}
               className="service"
               key={room}
             >
@@ -187,8 +176,7 @@ async function HomeContent() {
           </h2>
 
           <p>
-            Tell us about your project and connect with the right
-            professional.
+            Tell us about your project and connect with the right professional.
           </p>
         </div>
 
