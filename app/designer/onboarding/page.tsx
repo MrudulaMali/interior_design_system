@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 
 const availableSpecializations = [
@@ -67,6 +67,14 @@ export default function DesignerOnboarding() {
   ]);
   const [newImageUrl, setNewImageUrl] = useState("");
   const [newImageCaption, setNewImageCaption] = useState("");
+
+  // Upload states
+  const [uploadTab, setUploadTab] = useState<"device" | "url">("device");
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const projectFileInputRef = useRef<HTMLInputElement>(null);
+  const avatarFileInputRef = useRef<HTMLInputElement>(null);
 
   // Load existing profile if user already started
   useEffect(() => {
@@ -140,8 +148,138 @@ export default function DesignerOnboarding() {
     }
   }
 
+  function updateImageCaption(index: number, newCaption: string) {
+    setImages((prev) =>
+      prev.map((img, i) => (i === index ? { ...img, caption: newCaption } : img))
+    );
+  }
+
   function removeImage(index: number) {
     setImages(images.filter((_, i) => i !== index));
+  }
+
+  async function uploadFilesFromDevice(fileList: FileList | File[]) {
+    const files = Array.from(fileList).filter((f) => f.type.startsWith("image/"));
+    if (files.length === 0) {
+      setError("Please select valid image files (JPG, PNG, WEBP, GIF, etc.).");
+      return;
+    }
+
+    setUploadingImages(true);
+    setError("");
+
+    try {
+      const formData = new FormData();
+      for (const file of files) {
+        formData.append("files", file);
+      }
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to upload image(s).");
+      }
+
+      const data = await res.json();
+      if (Array.isArray(data.files) && data.files.length > 0) {
+        const newItems = data.files.map((f: { url: string; caption?: string }) => ({
+          url: f.url,
+          caption: f.caption || "Project Image",
+        }));
+        setImages((prev) => [...prev, ...newItems]);
+      }
+    } catch (err) {
+      console.warn("Upload endpoint failed, falling back to in-browser file reading:", err);
+      // Browser fallback using FileReader
+      try {
+        const fallbackItems: { url: string; caption: string }[] = [];
+        for (const file of files) {
+          const dataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          const cleanCaption = file.name.replace(/\.[^/.]+$/, "").replace(/[_-]+/g, " ");
+          fallbackItems.push({ url: dataUrl, caption: cleanCaption });
+        }
+        setImages((prev) => [...prev, ...fallbackItems]);
+      } catch {
+        setError(err instanceof Error ? err.message : "Error reading files from device.");
+      }
+    } finally {
+      setUploadingImages(false);
+      if (projectFileInputRef.current) {
+        projectFileInputRef.current.value = "";
+      }
+    }
+  }
+
+  async function uploadAvatarFromDevice(file: File) {
+    if (!file.type.startsWith("image/")) {
+      setError("Please select a valid image file for your profile photo.");
+      return;
+    }
+
+    setUploadingAvatar(true);
+    setError("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to upload profile photo.");
+      }
+
+      const data = await res.json();
+      if (data.url) {
+        setProfileImage(data.url);
+      }
+    } catch (err) {
+      console.warn("Avatar upload failed, falling back to data URL:", err);
+      const reader = new FileReader();
+      reader.onload = () => {
+        setProfileImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarFileInputRef.current) {
+        avatarFileInputRef.current.value = "";
+      }
+    }
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      void uploadFilesFromDevice(e.dataTransfer.files);
+    }
   }
 
   async function handleSave(isDraft: boolean) {
@@ -219,10 +357,10 @@ export default function DesignerOnboarding() {
   return (
     <div className="page-wrap" style={{ maxWidth: "1000px", margin: "34px auto 80px" }}>
       <section className="page-hero">
-        <span className="eyebrow">OPTION B — DESIGNER ONBOARDING</span>
-        <h1>Create Your Professional Designer Profile</h1>
+        <span className="eyebrow">DESIGNER STUDIO</span>
+        <h1>Manage Your Professional Designer Profile</h1>
         <p>
-          Showcase your style, add portfolio galleries, and connect with homeowners looking for your expertise.
+          Showcase your style, upload high-resolution portfolio photos directly from your device, and get approved to connect with clients.
         </p>
 
         {existingStatus && (
@@ -253,6 +391,7 @@ export default function DesignerOnboarding() {
             Status: {existingStatus.toUpperCase()}
             {existingStatus === "pending" && " (Awaiting Admin Review)"}
             {existingStatus === "approved" && " (Live on Public Directory)"}
+            {existingStatus === "rejected" && " (Revision Requested)"}
           </div>
         )}
       </section>
@@ -373,14 +512,75 @@ export default function DesignerOnboarding() {
               Show phone number publicly on profile (otherwise clients contact via enquiry form)
             </label>
 
-            <label className="wide">
-              Profile Photo URL
-              <input
-                placeholder="https://... (or image link)"
-                value={profileImage}
-                onChange={(e) => setProfileImage(e.target.value)}
-              />
-            </label>
+            {/* Profile Photo / Avatar with PC Upload */}
+            <div className="wide" style={{ background: "#fbfcfb", border: "1px solid #e7ede6", padding: "16px", borderRadius: "8px" }}>
+              <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--deep)", display: "block", marginBottom: "8px" }}>
+                Profile Photo / Studio Avatar
+              </span>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+                <div
+                  style={{
+                    width: "68px",
+                    height: "68px",
+                    borderRadius: "50%",
+                    backgroundImage: profileImage ? `url(${profileImage})` : undefined,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    backgroundColor: "var(--mint)",
+                    display: "grid",
+                    placeItems: "center",
+                    border: "2px solid #cfdad2",
+                    color: "var(--green)",
+                    fontWeight: 700,
+                    fontSize: "22px",
+                    flexShrink: 0,
+                  }}
+                >
+                  {!profileImage && (displayName ? displayName.charAt(0).toUpperCase() : "👤")}
+                </div>
+
+                <div style={{ flex: 1, minWidth: "240px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                    <input
+                      ref={avatarFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) void uploadAvatarFromDevice(file);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => avatarFileInputRef.current?.click()}
+                      className="outline-btn"
+                      disabled={uploadingAvatar}
+                      style={{ fontSize: "12px", padding: "7px 14px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                    >
+                      <span>💻</span> {uploadingAvatar ? "Uploading photo..." : "Upload Photo from PC / Device"}
+                    </button>
+                    {profileImage && (
+                      <button
+                        type="button"
+                        onClick={() => setProfileImage("")}
+                        style={{ background: "none", border: "none", color: "#991b1b", fontSize: "11px", cursor: "pointer", fontWeight: 600 }}
+                      >
+                        Remove Photo
+                      </button>
+                    )}
+                  </div>
+
+                  <input
+                    placeholder="Or enter image URL (https://...)"
+                    value={profileImage}
+                    onChange={(e) => setProfileImage(e.target.value)}
+                    style={{ fontSize: "11px", padding: "7px 10px" }}
+                  />
+                </div>
+              </div>
+            </div>
 
             <label className="wide">
               About Me & Design Philosophy
@@ -514,7 +714,7 @@ export default function DesignerOnboarding() {
         {/* Step 3: Portfolio Showcase Project */}
         <section className="content-panel">
           <h2>3. Feature Portfolio Project</h2>
-          <p className="muted">Upload your best project photos to display on your profile.</p>
+          <p className="muted">Upload your best project photos from your PC or device to display on your profile.</p>
 
           <div className="field-grid">
             <label>
@@ -551,74 +751,257 @@ export default function DesignerOnboarding() {
             </label>
           </div>
 
-          <div style={{ marginTop: "16px" }}>
-            <span style={{ fontSize: "12px", fontWeight: 700, color: "#24352f", display: "block", marginBottom: "8px" }}>
-              Project Images ({images.length}):
-            </span>
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "12px", marginBottom: "16px" }}>
-              {images.map((img, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    border: "1px solid #dce4dd",
-                    borderRadius: "6px",
-                    overflow: "hidden",
-                    position: "relative",
-                  }}
-                >
-                  <div
-                    style={{
-                      height: "120px",
-                      backgroundImage: `url(${img.url})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                      backgroundColor: "#e4e8e2",
-                    }}
-                  />
-                  <div style={{ padding: "8px", fontSize: "11px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {img.caption || `Image ${idx + 1}`}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => removeImage(idx)}
-                      style={{ background: "none", border: "none", color: "#991b1b", cursor: "pointer", fontWeight: 700 }}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
+          <div style={{ marginTop: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+              <span style={{ fontSize: "13px", fontWeight: 700, color: "#24352f" }}>
+                Project Images ({images.length}):
+              </span>
+              <span style={{ fontSize: "11px", color: "var(--muted)" }}>
+                The first image serves as the main cover photo for this project.
+              </span>
             </div>
 
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", background: "#f9faf8", padding: "14px", borderRadius: "6px" }}>
-              <input
-                placeholder="Image URL (https://...)"
-                value={newImageUrl}
-                onChange={(e) => setNewImageUrl(e.target.value)}
-                style={{ flex: 1, minWidth: "220px", fontSize: "12px" }}
-              />
-              <input
-                placeholder="Caption (e.g. Master Bedroom View)"
-                value={newImageCaption}
-                onChange={(e) => setNewImageCaption(e.target.value)}
-                style={{ width: "200px", fontSize: "12px" }}
-              />
-              <button
-                type="button"
-                onClick={addImage}
-                className="btn btn-small"
-                style={{ fontSize: "12px" }}
+            {/* Existing and Newly Added Images Preview Grid */}
+            {images.length > 0 && (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))",
+                  gap: "14px",
+                  marginBottom: "18px",
+                }}
               >
-                + Add Image
-              </button>
+                {images.map((img, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      border: "1px solid #dce4dd",
+                      borderRadius: "8px",
+                      overflow: "hidden",
+                      position: "relative",
+                      background: "#fff",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                      display: "flex",
+                      flexDirection: "column",
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: "135px",
+                        backgroundImage: `url(${img.url})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        backgroundColor: "#e4e8e2",
+                        position: "relative",
+                      }}
+                    >
+                      {idx === 0 && (
+                        <span
+                          style={{
+                            position: "absolute",
+                            top: "8px",
+                            left: "8px",
+                            background: "var(--green)",
+                            color: "#fff",
+                            fontSize: "9px",
+                            fontWeight: 700,
+                            padding: "3px 7px",
+                            borderRadius: "4px",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          Cover Image
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ padding: "10px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <label style={{ fontSize: "10px", color: "var(--muted)", margin: 0, fontWeight: 600 }}>
+                        Caption:
+                      </label>
+                      <input
+                        value={img.caption}
+                        onChange={(e) => updateImageCaption(idx, e.target.value)}
+                        placeholder="e.g. Master Bedroom"
+                        style={{
+                          fontSize: "11px",
+                          border: "1px solid #dce4dd",
+                          borderRadius: "4px",
+                          padding: "5px 7px",
+                          width: "100%",
+                        }}
+                      />
+                      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "2px" }}>
+                        <button
+                          type="button"
+                          onClick={() => removeImage(idx)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#b91c1c",
+                            cursor: "pointer",
+                            fontWeight: 700,
+                            fontSize: "11px",
+                            padding: "2px 4px",
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add Image Options: PC/Device Upload vs URL */}
+            <div
+              style={{
+                background: "#f9faf8",
+                border: "1px solid #e2e8e0",
+                borderRadius: "8px",
+                padding: "16px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  gap: "8px",
+                  marginBottom: "14px",
+                  borderBottom: "1px solid #e0e7df",
+                  paddingBottom: "10px",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setUploadTab("device")}
+                  style={{
+                    background: uploadTab === "device" ? "var(--green)" : "#fff",
+                    color: uploadTab === "device" ? "#fff" : "var(--ink)",
+                    border: "1px solid",
+                    borderColor: uploadTab === "device" ? "var(--green)" : "#cfdad2",
+                    padding: "7px 16px",
+                    borderRadius: "20px",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <span>💻</span> Upload from Device (PC / Phone)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setUploadTab("url")}
+                  style={{
+                    background: uploadTab === "url" ? "var(--green)" : "#fff",
+                    color: uploadTab === "url" ? "#fff" : "var(--ink)",
+                    border: "1px solid",
+                    borderColor: uploadTab === "url" ? "var(--green)" : "#cfdad2",
+                    padding: "7px 16px",
+                    borderRadius: "20px",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <span>🔗</span> Paste Image URL
+                </button>
+              </div>
+
+              {uploadTab === "device" ? (
+                <div>
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => projectFileInputRef.current?.click()}
+                    style={{
+                      border: isDragging ? "2px dashed var(--green)" : "2px dashed #b8c7bd",
+                      borderRadius: "8px",
+                      padding: "28px 20px",
+                      textAlign: "center",
+                      background: isDragging ? "#eef6f1" : "#ffffff",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    <input
+                      ref={projectFileInputRef}
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          void uploadFilesFromDevice(e.target.files);
+                        }
+                      }}
+                    />
+                    <div style={{ fontSize: "36px", marginBottom: "8px" }}>📁</div>
+                    <div style={{ fontWeight: 600, fontSize: "14px", color: "var(--deep)", marginBottom: "4px" }}>
+                      Click to choose images from your PC or device
+                    </div>
+                    <div style={{ fontSize: "12px", color: "var(--muted)", marginBottom: "14px" }}>
+                      Or drag and drop files directly here. Supports JPG, PNG, WEBP, GIF. You can select multiple images at once.
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-small"
+                      style={{ fontSize: "12px", pointerEvents: "none" }}
+                    >
+                      {uploadingImages ? "Uploading images..." : "+ Browse Photos from Device"}
+                    </button>
+                    {uploadingImages && (
+                      <div style={{ marginTop: "12px", color: "var(--green)", fontWeight: 600, fontSize: "12px" }}>
+                        ⏳ Uploading and processing images, please wait...
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  <input
+                    placeholder="Image URL (https://...)"
+                    value={newImageUrl}
+                    onChange={(e) => setNewImageUrl(e.target.value)}
+                    style={{ flex: 1, minWidth: "220px", fontSize: "12px" }}
+                  />
+                  <input
+                    placeholder="Caption (e.g. Master Bedroom View)"
+                    value={newImageCaption}
+                    onChange={(e) => setNewImageCaption(e.target.value)}
+                    style={{ width: "200px", fontSize: "12px" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={addImage}
+                    className="btn btn-small"
+                    style={{ fontSize: "12px" }}
+                  >
+                    + Add Image
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </section>
 
         {/* Step 4: Submission Actions */}
-        <div style={{ display: "flex", gap: "14px", justifyContent: "flex-end" }}>
+        <div style={{ display: "flex", gap: "14px", justifyContent: "flex-end", alignItems: "center" }}>
+          <Link
+            href="/designer/dashboard"
+            style={{ fontSize: "12px", color: "var(--muted)", textDecoration: "underline", marginRight: "auto" }}
+          >
+            ← Back to Designer Dashboard
+          </Link>
+
           <button
             type="button"
             className="outline-btn"
