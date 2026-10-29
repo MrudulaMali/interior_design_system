@@ -8,6 +8,9 @@ import {
   jsonb,
   integer,
   boolean,
+  boolean,
+  numeric,
+  integer,
 } from "drizzle-orm/pg-core";
 
 export const enquiryStatusEnum = pgEnum("enquiry_status", [
@@ -141,12 +144,41 @@ export type Enquiry = typeof enquiries.$inferSelect;
 export type NewEnquiry = typeof enquiries.$inferInsert;
 export type EnquiryStatus = (typeof enquiryStatusEnum.enumValues)[number];
 
-export type User = typeof users.$inferSelect;
-export type NewUser = typeof users.$inferInsert;
-export type Session = typeof sessions.$inferSelect;
-export type NewSession = typeof sessions.$inferInsert;
 
-export type DesignerProfile = typeof designerProfiles.$inferSelect;
-export type NewDesignerProfile = typeof designerProfiles.$inferInsert;
-export type PortfolioProject = typeof portfolioProjects.$inferSelect;
-export type NewPortfolioProject = typeof portfolioProjects.$inferInsert;
+export const designers = pgTable("designers", {
+  id: serial("id").primaryKey(),
+
+  fullName: varchar("full_name", { length: 150 }).notNull(),
+
+  designStyle: varchar("design_style", { length: 100 }).notNull(),
+
+  city: varchar("city", { length: 150 }).notNull(),
+
+  services: jsonb("services")
+  .$type<string[]>()
+  .notNull()
+  .default([]),
+
+  rating: numeric("rating", {
+    precision: 2,
+    scale: 1,
+  }).notNull().default("0.0"),
+
+experienceYears: integer("experience_years").notNull().default(0),
+  profileImage: text("profile_image"),
+
+  bio: text("bio"),
+
+  isVerified: boolean("is_verified").notNull().default(false),
+
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export type Designer = typeof designers.$inferSelect;
+export type NewDesigner = typeof designers.$inferInsert;

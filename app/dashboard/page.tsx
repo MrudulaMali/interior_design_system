@@ -1,8 +1,5 @@
-"use client";
 
-import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { EnquiryStatus } from "@/db/schema";
+import Link from 'next/link';
 
 interface Enquiry {
   id: number;
@@ -247,19 +244,40 @@ export default function DashboardPage() {
   const filteredEnquiries = enquiries.filter((enquiry) => {
     const query = search.trim().toLowerCase();
 
-    const matchesSearch =
-      !query ||
-      [
-        enquiry.fullName,
-        enquiry.email,
-        enquiry.phone,
-        enquiry.city,
-        enquiry.propertyType,
-        String(enquiry.id),
-      ].some((value) => value.toLowerCase().includes(query));
+export default function Dashboard() {
+  return (
+    <div className="dashboard-layout">
+      <aside className="dash-sidebar">
+        <div className="dash-user">
+          <div className="avatar small-avatar">PS</div>
+          <b>Priya Sharma</b>
+          <small>Interior Designer</small>
+        </div>
 
-    const matchesStatus =
-      statusFilter === "all" || enquiry.status === statusFilter;
+        {navigation.map((item) => (
+          <Link
+            href={item.href}
+            className={
+              item.label === 'Overview' ? 'active' : ''
+            }
+            key={item.label}
+          >
+            <span>{item.icon}</span>
+            {item.label}
+          </Link>
+        ))}
+
+        <Link className="sidebar-bottom" href="/">
+          ↩ Back to website
+        </Link>
+      </aside>
+
+      <section className="dash-main">
+        <div className="dash-welcome">
+          <div>
+            <span className="eyebrow">
+              DESIGNER WORKSPACE
+            </span>
 
     let matchesTab = true;
     if (userRole === "designer") {
@@ -419,7 +437,6 @@ export default function DashboardPage() {
               Retry
             </button>
           </div>
-        )}
 
         {notice && (
           <div
@@ -436,7 +453,6 @@ export default function DashboardPage() {
           >
             {notice}
           </div>
-        )}
 
         {/* 4 Stat Cards */}
         <div className="stat-grid">
