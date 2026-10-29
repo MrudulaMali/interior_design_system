@@ -75,13 +75,10 @@ export async function GET(request: NextRequest) {
       // Administrators can view all enquiries
       filterCondition = undefined;
     } else if (currentUser.role === "designer") {
-      // Designers view enquiries assigned to them OR open unassigned customer enquiries seeking designers
-      filterCondition = or(
-        eq(enquiries.assignedDesignerId, currentUser.id),
-        sql`${enquiries.assignedDesignerId} IS NULL`
-      );
+      // Designers view strictly enquiries assigned specifically to them
+      filterCondition = eq(enquiries.assignedDesignerId, currentUser.id);
     } else {
-      // Customers view only their own enquiries
+      // Customers view strictly their own submitted enquiries
       filterCondition = or(
         eq(enquiries.customerId, currentUser.id),
         eq(enquiries.email, currentUser.email)
@@ -228,34 +225,58 @@ export async function PATCH(request: NextRequest) {
       updatedAt: new Date(),
     };
 
-    // Role-based authorization:
-    // - Admin can update any enquiry and assign designers
-    // - Designer can update enquiries assigned to them, or claim open customer leads
-    // - Customer cannot change statuses
+    // Role-based authorization & permission validation:
+    // - Admin: can update any status and assign/reassign assignedDesignerId
+    // - Designer: can strictly only update status of enquiries assigned to them
+    // - Customer: can strictly only cancel ('cancelled') their own pending/contacted enquiries
     if (currentUser.role === "designer") {
-      if (body.action === "claim" && target.assignedDesignerId === null) {
-        updates.assignedDesignerId = currentUser.id;
-        updates.status = "contacted";
-      } else if (target.assignedDesignerId !== currentUser.id) {
+      if (target.assignedDesignerId !== currentUser.id) {
         return NextResponse.json(
-          { error: "Access denied. You can only update enquiries assigned to you or claim open leads." },
+          { error: "Access denied. You can only update enquiries assigned to you." },
           { status: 403 }
         );
       }
-    } else if (currentUser.role !== "admin") {
+      if (status && allowedStatuses.includes(status)) {
+        updates.status = status;
+      }
+    } else if (currentUser.role === "customer") {
+      const isOwner =
+        target.customerId === currentUser.id ||
+        target.email.toLowerCase() === currentUser.email.toLowerCase();
+
+      if (!isOwner) {
+        return NextResponse.json(
+          { error: "Access denied. You can only manage your own enquiries." },
+          { status: 403 }
+        );
+      }
+
+      if (status === "cancelled") {
+        if (target.status !== "new" && target.status !== "contacted") {
+          return NextResponse.json(
+            { error: "This enquiry is already in progress or completed and cannot be cancelled." },
+            { status: 400 }
+          );
+        }
+        updates.status = "cancelled";
+      } else {
+        return NextResponse.json(
+          { error: "Customers may only cancel pending enquiries." },
+          { status: 403 }
+        );
+      }
+    } else if (currentUser.role === "admin") {
+      if (status && allowedStatuses.includes(status)) {
+        updates.status = status;
+      }
+      if (assignedDesignerId !== undefined) {
+        updates.assignedDesignerId = assignedDesignerId;
+      }
+    } else {
       return NextResponse.json(
-        { error: "Access denied. Only administrators and assigned designers can update enquiries." },
+        { error: "Unauthorized operation." },
         { status: 403 }
       );
-    }
-
-    if (status && allowedStatuses.includes(status)) {
-      updates.status = status;
-    }
-
-    // Only Admin can reassign enquiries
-    if (assignedDesignerId !== undefined && currentUser.role === "admin") {
-      updates.assignedDesignerId = assignedDesignerId;
     }
 
     const [updated] = await db

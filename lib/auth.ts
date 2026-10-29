@@ -1,13 +1,13 @@
 import crypto from "crypto";
 import { cookies } from "next/headers";
 import { db } from "@/db";
-import { users, sessions, User } from "@/db/schema";
+import { users, sessions } from "@/db/schema";
 import { eq, and, gt } from "drizzle-orm";
 
 export const SESSION_COOKIE_NAME = "auth_session";
 const SESSION_EXPIRY_DAYS = 30;
 
-export type SafeUser = Omit<User, "passwordHash">;
+export type SafeUser = Omit<typeof users.$inferSelect, "passwordHash">;
 
 /**
  * Password hashing and timing-safe verification using built-in Node.js crypto.

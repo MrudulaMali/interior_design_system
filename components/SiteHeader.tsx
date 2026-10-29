@@ -59,22 +59,24 @@ export default function SiteHeader() {
         <Link href="/enquiry">Enquiries</Link>
 
         {user?.role === "admin" && (
-          <Link href="/admin" style={{ fontWeight: 700, color: "#14594c" }}>
-            Admin Panel
+          <Link href="/admin/dashboard" style={{ fontWeight: 700, color: "#14594c" }}>
+            Admin Dashboard
           </Link>
         )}
 
         {user?.role === "designer" && (
           <>
-            <Link href="/designer/onboarding" style={{ fontWeight: 600, color: "#14594c" }}>
-              My Profile
+            <Link href="/designer/dashboard" style={{ fontWeight: 600, color: "#14594c" }}>
+              Designer Workspace
             </Link>
-            <Link href="/dashboard">Assigned Leads</Link>
+            <Link href="/designer/onboarding">Profile & Portfolio</Link>
           </>
         )}
 
         {user?.role === "customer" && (
-          <Link href="/dashboard">My Enquiries</Link>
+          <Link href="/customer/dashboard" style={{ fontWeight: 600, color: "#14594c" }}>
+            Customer Dashboard
+          </Link>
         )}
       </nav>
 
@@ -83,15 +85,6 @@ export default function SiteHeader() {
           <span style={{ fontSize: "12px", color: "#85877f" }}>...</span>
         ) : user ? (
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <Link
-              href="/choose-journey"
-              className="outline-btn btn-small"
-              style={{ fontSize: "11px", padding: "6px 10px" }}
-              title="Switch user journey (Find Designers vs Offer Services)"
-            >
-              Journeys ⇄
-            </Link>
-
             <span style={{ fontSize: "13px", fontWeight: 600, color: "#24352f" }}>
               {user.fullName.split(" ")[0]}
               <span
