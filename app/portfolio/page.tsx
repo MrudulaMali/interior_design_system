@@ -1,242 +1,87 @@
-import Link from "next/link";
-import { getApprovedPortfolioProjects } from "@/lib/designers";
+import { Suspense } from "react";
+import { getApprovedPortfolioProjects, type PublicProjectItem } from "@/lib/designers";
+import PortfolioClient from "./PortfolioClient";
 
-"use client";
+const defaultInspirations: PublicProjectItem[] = [
+  {
+    id: 1,
+    title: "Warm Minimal Living & Dining",
+    category: "Living room",
+    designerCity: "Pune",
+    image: "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=800&q=80",
+    designerProfileId: 1,
+    designerName: "Riya Sharma Designs",
+    description: "Serene neutral-toned living space tailored for calm everyday living.",
+  },
+  {
+    id: 2,
+    title: "Modern Open Plan Kitchen",
+    category: "Kitchen",
+    designerCity: "Mumbai",
+    image: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80",
+    designerProfileId: 1,
+    designerName: "Riya Sharma Designs",
+    description: "Quartz countertops with fluted oak cabinetry and integrated appliances.",
+  },
+  {
+    id: 3,
+    title: "Soft Neutral Master Bedroom",
+    category: "Bedroom",
+    designerCity: "Pune",
+    image: "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=800&q=80",
+    designerProfileId: 2,
+    designerName: "Contemporary Living",
+    description: "Textured headboard wall with warm ambient illumination.",
+  },
+  {
+    id: 4,
+    title: "Boutique Executive Office Studio",
+    category: "Commercial",
+    designerCity: "Kolhapur",
+    image: "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=800&q=80",
+    designerProfileId: 3,
+    designerName: "Studio Luxe",
+    description: "Modern executive suite with acoustic panels and bespoke storage.",
+  },
+  {
+    id: 5,
+    title: "Modern Japandi Dining Area",
+    category: "Dining",
+    designerCity: "Pune",
+    image: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=800&q=80",
+    designerProfileId: 1,
+    designerName: "Riya Sharma Designs",
+    description: "Solid oak dining table and linen hanging lamps.",
+  },
+  {
+    id: 6,
+    title: "Urban Minimalist Penthouse",
+    category: "Residential",
+    designerCity: "Mumbai",
+    image: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=800&q=80",
+    designerProfileId: 2,
+    designerName: "Contemporary Living",
+    description: "High ceilings with floor-to-ceiling panoramic glass windows.",
+  },
+];
 
-import { useMemo, useState } from "react";
-
-interface Project {
-  id: number;
-  title: string;
-  category: string;
-  city: string;
-  popularity: number;
-  year: number;
+export default function PortfolioPage() {
+  return (
+    <Suspense
+      fallback={
+        <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--muted)" }}>
+          Loading design portfolio...
+        </div>
+      }
+    >
+      <PortfolioLoader />
+    </Suspense>
+  );
 }
 
-const projects: Project[] = [
-  { id: 1, title: "Warm Minimal Living", category: "Residential", city: "Pune", popularity: 95, year: 2026 },
-  { id: 2, title: "A Calm City Apartment", category: "Apartment", city: "Mumbai", popularity: 90, year: 2025 },
-  { id: 3, title: "Natural Modern Kitchen", category: "Kitchen", city: "Kolhapur", popularity: 98, year: 2026 },
-  { id: 4, title: "Boutique Office Studio", category: "Commercial", city: "Pune", popularity: 85, year: 2025 },
-  { id: 5, title: "Contemporary Family Home", category: "Residential", city: "Nashik", popularity: 92, year: 2024 },
-  { id: 6, title: "A Refined Bedroom", category: "Bedroom", city: "Mumbai", popularity: 88, year: 2026 },
-  { id: 7, title: "Modern Open Plan", category: "Residential", city: "Pune", popularity: 80, year: 2025 },
-  { id: 8, title: "Elegant Dining Space", category: "Dining", city: "Kolhapur", popularity: 82, year: 2024 },
-  { id: 9, title: "Soft Neutral Retreat", category: "Bedroom", city: "Mumbai", popularity: 87, year: 2025 },
-];
-
-const categories = [
-  "All Projects",
-  "Residential",
-  "Commercial",
-  "Kitchen",
-  "Bedroom",
-];
-
-export default function Portfolio() {
-  const [activeCategory, setActiveCategory] = useState("All Projects");
-  const [sortBy, setSortBy] = useState("popular");
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-
-  const filteredProjects = useMemo(() => {
-    const filtered = projects.filter((project) => {
-      if (activeCategory === "All Projects") return true;
-      return project.category === activeCategory;
-    });
-
-    return [...filtered].sort((a, b) => {
-      if (sortBy === "newest") return b.year - a.year;
-      return b.popularity - a.popularity;
-    });
-  }, [activeCategory, sortBy]);
-const defaultInspirations = [
-  { id: 1, title: "Warm Minimal Living & Dining", category: "Living room", designerCity: "Pune", image: "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=800&q=80", designerProfileId: 1, designerName: "Riya Sharma Designs" },
-  { id: 2, title: "Modern Open Plan Kitchen", category: "Kitchen", designerCity: "Mumbai", image: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80", designerProfileId: 1, designerName: "Riya Sharma Designs" },
-  { id: 3, title: "Soft Neutral Master Bedroom", category: "Bedroom", designerCity: "Pune", image: "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=800&q=80", designerProfileId: 1, designerName: "Contemporary Living" },
-  { id: 4, title: "Boutique Executive Office Studio", category: "Commercial", designerCity: "Kolhapur", image: "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=800&q=80", designerProfileId: 1, designerName: "Studio Luxe" },
-];
-
-export default async function Portfolio() {
+async function PortfolioLoader() {
   const realProjects = await getApprovedPortfolioProjects();
   const displayProjects = realProjects.length > 0 ? realProjects : defaultInspirations;
 
-  return (
-    <div className="page-wrap">
-      <section className="page-hero portfolio-hero">
-        <span className="eyebrow">DESIGN INSPIRATION</span>
-        <h1>Interior Design Portfolio</h1>
-        <p>
-          Explore real transformations created by approved interior designers. Find inspiration for your living room, modular kitchen, bedroom, or commercial space.
-        </p>
-      </section>
-
-      <div className="portfolio-toolbar">
-        <div className="tag-list">
-          {categories.map((category) => (
-            <button
-              key={category}
-              type="button"
-              onClick={() => setActiveCategory(category)}
-              className={
-                activeCategory === category ? "active" : ""
-              }
-              style={{
-                border: "none",
-                cursor: "pointer",
-                padding: "10px 14px",
-                borderRadius: "5px",
-                background:
-                  activeCategory === category ? "#14594c" : "#edf3ed",
-                color:
-                  activeCategory === category ? "#ffffff" : "#14594c",
-              }}
-            >
-              {category}
-            </button>
-          ))}
-        </div>
-
-        <select
-          value={sortBy}
-          onChange={(event) => setSortBy(event.target.value)}
-          aria-label="Sort projects"
-        >
-          <option value="popular">Most popular</option>
-          <option value="newest">Newest first</option>
-        </select>
-          <span>All Work ({displayProjects.length})</span>
-          <span>Living Room</span>
-          <span>Modular Kitchen</span>
-          <span>Bedroom</span>
-          <span>Commercial</span>
-        </div>
-
-        <Link href="/designers" className="btn btn-small" style={{ fontSize: "11px" }}>
-          Explore Designers →
-        </Link>
-      </div>
-
-      <p style={{ margin: "12px 0", color: "var(--muted)" }}>
-        Showing {filteredProjects.length} projects
-      </p>
-
-      <div className="portfolio-grid big-portfolio">
-        {filteredProjects.map((project, index) => (
-          <button
-            type="button"
-            className="project-card"
-            key={project.id}
-            onClick={() => setSelectedProject(project)}
-            style={{
-              textAlign: "left",
-              width: "100%",
-              cursor: "pointer",
-              font: "inherit",
-              background: "#ffffff",
-              color: "inherit",
-              border: "1px solid var(--line)",
-              padding: 0,
-            }}
-          >
-            <div
-              className={`project-image room-${(index % 4) + 1}`}
-        {displayProjects.map((project, index) => (
-          <Link
-            href={`/designer/${project.designerProfileId}`}
-            className="project-card"
-            key={`${project.id}-${index}`}
-          >
-            <div
-              className="project-image"
-              style={{
-                backgroundImage: `url(${project.image})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }}
-            />
-
-            <div className="project-meta">
-              <div>
-                <h3>{project.title}</h3>
-                <small>
-                  {project.category} · {project.city}
-                <h3 style={{ fontSize: "14px", margin: "0 0 4px" }}>{project.title}</h3>
-                <small style={{ color: "var(--muted)" }}>
-                  {project.category} · by {project.designerName} ({project.designerCity || "Verified Studio"})
-                </small>
-              </div>
-
-              <span style={{ fontSize: "18px", color: "var(--green)" }}>↗</span>
-            </div>
-          </button>
-        ))}
-      </div>
-
-      {filteredProjects.length === 0 && (
-        <p>No projects found in this category.</p>
-      )}
-
-      {selectedProject && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Project details"
-          onClick={() => setSelectedProject(null)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 1000,
-            background: "rgba(0, 0, 0, 0.55)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "20px",
-          }}
-        >
-          <div
-            onClick={(event) => event.stopPropagation()}
-            style={{
-              width: "100%",
-              maxWidth: "480px",
-              background: "#ffffff",
-              color: "#24352f",
-              borderRadius: "12px",
-              padding: "28px",
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setSelectedProject(null)}
-              aria-label="Close project details"
-              style={{
-                float: "right",
-                border: "none",
-                background: "transparent",
-                fontSize: "22px",
-                cursor: "pointer",
-              }}
-            >
-              ×
-            </button>
-
-            <span className="eyebrow">PROJECT DETAILS</span>
-            <h2>{selectedProject.title}</h2>
-            <p>
-              Category: {selectedProject.category}
-            </p>
-            <p>Location: {selectedProject.city}</p>
-            <p>Project year: {selectedProject.year}</p>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => setSelectedProject(null)}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  return <PortfolioClient initialProjects={displayProjects} />;
 }
