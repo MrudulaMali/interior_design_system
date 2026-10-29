@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { desc, eq, sql } from "drizzle-orm";
+import { desc, eq, sql, and, or } from "drizzle-orm";
 import { db } from "@/db";
-import { enquiries, enquiryStatusEnum, EnquiryStatus } from "@/db/schema";
+import { enquiries, EnquiryStatus } from "@/db/schema";
+import { getCurrentUser } from "@/lib/auth";
 
 const allowedStatuses: EnquiryStatus[] = [
   "new",
@@ -53,54 +54,57 @@ function validateEnquiry(body: unknown): string | null {
     return "Please enter a valid phone number.";
   }
 
-  const optionalFields = [
-    ["contactMethod", 30],
-    ["propertySize", 50],
-    ["bedrooms", 50],
-    ["designStyle", 100],
-    ["startDate", 50],
-    ["description", 3000],
-  ] as const;
-
-  for (const [field, maxLength] of optionalFields) {
-    if (
-      body[field] !== undefined &&
-      body[field] !== null &&
-      !validString(body[field], maxLength)
-    ) {
-      return `Invalid ${field}.`;
-    }
-  }
-
-  if (
-    body.rooms !== undefined &&
-    body.rooms !== null &&
-    (!Array.isArray(body.rooms) ||
-      body.rooms.length > 20 ||
-      !body.rooms.every((room) => typeof room === "string"))
-  ) {
-    return "Invalid room selection.";
-  }
-
   return null;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const [allEnquiries, statusCounts] = await Promise.all([
-      db
-        .select()
-        .from(enquiries)
-        .orderBy(desc(enquiries.createdAt))
-        .limit(200),
+    const currentUser = await getCurrentUser();
 
-      db
-        .select({
-          status: enquiries.status,
-          count: sql<number>`count(*)::int`,
-        })
-        .from(enquiries)
-        .groupBy(enquiries.status),
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: "Authentication required to view enquiries." },
+        { status: 401 }
+      );
+    }
+
+    let filterCondition = undefined;
+
+    // Role-based scoping
+    if (currentUser.role === "admin") {
+      // Administrators can view all enquiries
+      filterCondition = undefined;
+    } else if (currentUser.role === "designer") {
+      // Designers view enquiries assigned to them OR open unassigned customer enquiries seeking designers
+      filterCondition = or(
+        eq(enquiries.assignedDesignerId, currentUser.id),
+        sql`${enquiries.assignedDesignerId} IS NULL`
+      );
+    } else {
+      // Customers view only their own enquiries
+      filterCondition = or(
+        eq(enquiries.customerId, currentUser.id),
+        eq(enquiries.email, currentUser.email)
+      );
+    }
+
+    const query = db
+      .select()
+      .from(enquiries)
+      .orderBy(desc(enquiries.createdAt))
+      .limit(200);
+
+    const countQuery = db
+      .select({
+        status: enquiries.status,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(enquiries)
+      .groupBy(enquiries.status);
+
+    const [allEnquiries, statusCounts] = await Promise.all([
+      filterCondition ? query.where(filterCondition) : query,
+      filterCondition ? countQuery.where(filterCondition) : countQuery,
     ]);
 
     const counts: Record<string, number> = {
@@ -122,10 +126,10 @@ export async function GET() {
     return NextResponse.json({
       enquiries: allEnquiries,
       counts,
+      role: currentUser.role,
     });
   } catch (error) {
     console.error("GET enquiries error:", error);
-
     return NextResponse.json(
       { error: "Unable to load enquiries." },
       { status: 500 }
@@ -145,9 +149,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const currentUser = await getCurrentUser();
+    const customerId = currentUser ? currentUser.id : null;
+    const assignedDesignerId =
+      typeof body.assignedDesignerId === "number" && body.assignedDesignerId > 0
+        ? body.assignedDesignerId
+        : null;
+
     const [created] = await db
       .insert(enquiries)
       .values({
+        customerId,
+        assignedDesignerId,
         fullName: (body.fullName as string).trim(),
         email: (body.email as string).trim().toLowerCase(),
         phone: (body.phone as string).trim(),
@@ -166,12 +179,11 @@ export async function POST(request: NextRequest) {
       .returning();
 
     return NextResponse.json(
-      { message: "Enquiry created successfully.", enquiry: created },
+      { message: "Enquiry submitted successfully.", enquiry: created },
       { status: 201 }
     );
   } catch (error) {
     console.error("POST enquiry error:", error);
-
     return NextResponse.json(
       { error: "Unable to save enquiry." },
       { status: 500 }
@@ -181,53 +193,83 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const body: unknown = await request.json();
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
+    const body: unknown = await request.json();
     if (!isObject(body)) {
-      return NextResponse.json(
-        { error: "Invalid request." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid request." }, { status: 400 });
     }
 
     const id = Number(body.id);
     const status = body.status as EnquiryStatus;
+    const assignedDesignerId = body.assignedDesignerId !== undefined
+      ? (body.assignedDesignerId ? Number(body.assignedDesignerId) : null)
+      : undefined;
 
-    if (
-      !Number.isSafeInteger(id) ||
-      id < 1 ||
-      typeof status !== "string" ||
-      !allowedStatuses.includes(status)
-    ) {
+    if (!Number.isSafeInteger(id) || id < 1) {
+      return NextResponse.json({ error: "Valid enquiry ID is required." }, { status: 400 });
+    }
+
+    // Retrieve enquiry to verify permissions
+    const [target] = await db
+      .select()
+      .from(enquiries)
+      .where(eq(enquiries.id, id))
+      .limit(1);
+
+    if (!target) {
+      return NextResponse.json({ error: "Enquiry not found." }, { status: 404 });
+    }
+
+    const updates: Record<string, unknown> = {
+      updatedAt: new Date(),
+    };
+
+    // Role-based authorization:
+    // - Admin can update any enquiry and assign designers
+    // - Designer can update enquiries assigned to them, or claim open customer leads
+    // - Customer cannot change statuses
+    if (currentUser.role === "designer") {
+      if (body.action === "claim" && target.assignedDesignerId === null) {
+        updates.assignedDesignerId = currentUser.id;
+        updates.status = "contacted";
+      } else if (target.assignedDesignerId !== currentUser.id) {
+        return NextResponse.json(
+          { error: "Access denied. You can only update enquiries assigned to you or claim open leads." },
+          { status: 403 }
+        );
+      }
+    } else if (currentUser.role !== "admin") {
       return NextResponse.json(
-        { error: "Valid enquiry ID and status are required." },
-        { status: 400 }
+        { error: "Access denied. Only administrators and assigned designers can update enquiries." },
+        { status: 403 }
       );
+    }
+
+    if (status && allowedStatuses.includes(status)) {
+      updates.status = status;
+    }
+
+    // Only Admin can reassign enquiries
+    if (assignedDesignerId !== undefined && currentUser.role === "admin") {
+      updates.assignedDesignerId = assignedDesignerId;
     }
 
     const [updated] = await db
       .update(enquiries)
-      .set({
-        status,
-        updatedAt: new Date(),
-      })
+      .set(updates)
       .where(eq(enquiries.id, id))
       .returning();
 
-    if (!updated) {
-      return NextResponse.json(
-        { error: "Enquiry not found." },
-        { status: 404 }
-      );
-    }
-
     return NextResponse.json({
-      message: "Enquiry status updated.",
+      message: "Enquiry updated successfully.",
       enquiry: updated,
     });
   } catch (error) {
     console.error("PATCH enquiry error:", error);
-
     return NextResponse.json(
       { error: "Unable to update enquiry." },
       { status: 500 }
@@ -237,14 +279,33 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
-    const idParam = searchParams.get("id");
-    const id = Number(idParam);
+    const id = Number(searchParams.get("id"));
 
     if (!Number.isSafeInteger(id) || id < 1) {
+      return NextResponse.json({ error: "Valid enquiry ID is required." }, { status: 400 });
+    }
+
+    const [target] = await db
+      .select()
+      .from(enquiries)
+      .where(eq(enquiries.id, id))
+      .limit(1);
+
+    if (!target) {
+      return NextResponse.json({ error: "Enquiry not found." }, { status: 404 });
+    }
+
+    // Only Admin or the owning customer can delete their enquiry
+    if (currentUser.role !== "admin" && target.customerId !== currentUser.id) {
       return NextResponse.json(
-        { error: "Valid enquiry ID is required." },
-        { status: 400 }
+        { error: "Access denied. You can only delete your own enquiry." },
+        { status: 403 }
       );
     }
 
@@ -253,20 +314,12 @@ export async function DELETE(request: NextRequest) {
       .where(eq(enquiries.id, id))
       .returning();
 
-    if (!deleted) {
-      return NextResponse.json(
-        { error: "Enquiry not found." },
-        { status: 404 }
-      );
-    }
-
     return NextResponse.json({
       message: "Enquiry deleted successfully.",
       enquiry: deleted,
     });
   } catch (error) {
     console.error("DELETE enquiry error:", error);
-
     return NextResponse.json(
       { error: "Unable to delete enquiry." },
       { status: 500 }

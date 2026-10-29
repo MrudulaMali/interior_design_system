@@ -1,4 +1,3 @@
-
 import {
   pgTable,
   serial,
@@ -7,6 +6,8 @@ import {
   timestamp,
   pgEnum,
   jsonb,
+  integer,
+  boolean,
   boolean,
   numeric,
   integer,
@@ -20,8 +21,99 @@ export const enquiryStatusEnum = pgEnum("enquiry_status", [
   "cancelled",
 ]);
 
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  fullName: varchar("full_name", { length: 150 }).notNull(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  phone: varchar("phone", { length: 20 }),
+  passwordHash: varchar("password_hash", { length: 255 }).notNull(),
+  role: varchar("role", { length: 30 }).notNull().default("customer"), // 'admin' | 'customer' | 'designer'
+  status: varchar("status", { length: 30 }).notNull().default("active"), // 'active' | 'suspended'
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const sessions = pgTable("sessions", {
+  id: varchar("id", { length: 128 }).primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const designerProfiles = pgTable("designer_profiles", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: "cascade" }),
+  displayName: varchar("display_name", { length: 150 }).notNull(),
+  title: varchar("title", { length: 150 }).notNull(),
+  bio: text("bio"),
+  phone: varchar("phone", { length: 20 }),
+  showPhonePublicly: boolean("show_phone_publicly").default(false).notNull(),
+  city: varchar("city", { length: 100 }).notNull(),
+  serviceLocations: jsonb("service_locations")
+    .$type<string[]>()
+    .default([])
+    .notNull(),
+  yearsExperience: integer("years_experience").default(0).notNull(),
+  specializations: jsonb("specializations")
+    .$type<string[]>()
+    .default([])
+    .notNull(),
+  services: jsonb("services").$type<string[]>().default([]).notNull(),
+  projectTypes: jsonb("project_types").$type<string[]>().default([]).notNull(),
+  profileImage: text("profile_image"),
+  startingBudget: varchar("starting_budget", { length: 100 }),
+  status: varchar("status", { length: 30 }).default("pending").notNull(), // 'draft' | 'pending' | 'approved' | 'rejected'
+  rejectionReason: text("rejection_reason"),
+  rating: varchar("rating", { length: 10 }).default("4.8").notNull(),
+  reviewsCount: integer("reviews_count").default(0).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const portfolioProjects = pgTable("portfolio_projects", {
+  id: serial("id").primaryKey(),
+  designerProfileId: integer("designer_profile_id")
+    .notNull()
+    .references(() => designerProfiles.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 150 }).notNull(),
+  category: varchar("category", { length: 100 }).notNull(),
+  description: text("description"),
+  images: jsonb("images")
+    .$type<{ url: string; caption?: string }[]>()
+    .default([])
+    .notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export const enquiries = pgTable("enquiries", {
   id: serial("id").primaryKey(),
+  customerId: integer("customer_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  assignedDesignerId: integer("assigned_designer_id").references(
+    () => users.id,
+    { onDelete: "set null" }
+  ),
   fullName: varchar("full_name", { length: 150 }).notNull(),
   email: varchar("email", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 20 }).notNull(),
