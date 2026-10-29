@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 const roomOptions = [
@@ -17,6 +17,7 @@ const roomOptions = [
 const contactMethods = ["Phone", "Email", "WhatsApp"];
 
 export default function Enquiry() {
+  const [assignedDesignerId, setAssignedDesignerId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -40,6 +41,32 @@ export default function Enquiry() {
     propertyType: string;
     city: string;
   } | null>(null);
+
+  useEffect(() => {
+    // Read query parameter ?designer=...
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const des = params.get("designer");
+      if (des && !isNaN(Number(des))) {
+        setAssignedDesignerId(Number(des));
+      }
+    }
+
+    // Auto-fill logged-in user's details if available
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.user) {
+          setFormData((prev) => ({
+            ...prev,
+            fullName: prev.fullName || data.user.fullName || "",
+            email: prev.email || data.user.email || "",
+            phone: prev.phone || data.user.phone || "",
+          }));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   function handleInputChange(
     e: React.ChangeEvent<
@@ -73,7 +100,10 @@ export default function Enquiry() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          assignedDesignerId,
+        }),
       });
 
       const result = await response.json();
