@@ -179,13 +179,13 @@ export default function Enquiry() {
           }}
         >
           <div>
-            <b style={{ color: "#065f46", fontSize: "14px" }}>Looking for Customers?</b>
+            <b style={{ color: "#065f46", fontSize: "14px" }}>Interior Designer Account Active</b>
             <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#047857" }}>
-              You are logged in as an Interior Designer. Homeowners use this form to hire you. To view customer briefs and manage your client leads, visit your workspace.
+              Homeowners use this form to hire interior designers. To review client enquiries assigned to your studio, visit your designer workspace.
             </p>
           </div>
           <Link href="/designer/dashboard" className="btn btn-small" style={{ fontSize: "12px" }}>
-            Go to Find Customers ↗
+            Go to Designer Workspace ↗
           </Link>
         </div>
       )}
