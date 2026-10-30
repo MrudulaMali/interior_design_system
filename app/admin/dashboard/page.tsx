@@ -256,6 +256,26 @@ export default function AdminDashboard() {
           <span>👥</span> Manage Users ({users.length})
         </button>
 
+        <Link
+          href="/admin/reports"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "10px 14px",
+            borderRadius: "6px",
+            color: "var(--green)",
+            fontWeight: 700,
+            fontSize: "12.5px",
+            textDecoration: "none",
+            background: "#edf5f0",
+            border: "1px solid #cce2d3",
+            margin: "4px 0",
+          }}
+        >
+          <span>📊</span> Decision Reports (6) ↗
+        </Link>
+
         <Link className="sidebar-bottom" href="/">
           ↩ Back to website
         </Link>
@@ -373,6 +393,154 @@ export default function AdminDashboard() {
                 </div>
               </div>
             )}
+
+            {/* Decision-Making Reports Section */}
+            <div
+              className="content-panel"
+              style={{
+                padding: "24px",
+                background: "#fff",
+                border: "1px solid var(--line)",
+                borderRadius: "8px",
+                marginBottom: "24px",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+                <div>
+                  <h3 style={{ margin: "0 0 4px", fontSize: "17px", color: "var(--deep)" }}>
+                    📊 Administrative Decision Reports
+                  </h3>
+                  <p style={{ margin: 0, fontSize: "12px", color: "var(--muted)" }}>
+                    Authoritative operational intelligence and exports (Excel & PDF) computed directly from PostgreSQL.
+                  </p>
+                </div>
+                <Link href="/admin/reports" className="btn btn-small" style={{ fontSize: "11px" }}>
+                  View All 6 Reports Hub ↗
+                </Link>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "12px" }}>
+                <Link
+                  href="/admin/reports/location-availability"
+                  style={{
+                    padding: "12px 14px",
+                    background: "#f8faf8",
+                    border: "1px solid var(--line)",
+                    borderRadius: "6px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    textDecoration: "none",
+                  }}
+                >
+                  <span style={{ fontSize: "20px" }}>📍</span>
+                  <div>
+                    <strong style={{ fontSize: "12.5px", color: "var(--deep)", display: "block" }}>1. Location Availability</strong>
+                    <small style={{ color: "var(--muted)", fontSize: "11px" }}>Designer density & regional supply gaps</small>
+                  </div>
+                </Link>
+
+                <Link
+                  href="/admin/reports/enquiry-analysis"
+                  style={{
+                    padding: "12px 14px",
+                    background: "#f8faf8",
+                    border: "1px solid var(--line)",
+                    borderRadius: "6px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    textDecoration: "none",
+                  }}
+                >
+                  <span style={{ fontSize: "20px" }}>✉</span>
+                  <div>
+                    <strong style={{ fontSize: "12.5px", color: "var(--deep)", display: "block" }}>2. Customer Enquiry Analysis</strong>
+                    <small style={{ color: "var(--muted)", fontSize: "11px" }}>Lead lifecycle & unassigned demands</small>
+                  </div>
+                </Link>
+
+                <Link
+                  href="/admin/reports/designer-performance"
+                  style={{
+                    padding: "12px 14px",
+                    background: "#f8faf8",
+                    border: "1px solid var(--line)",
+                    borderRadius: "6px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    textDecoration: "none",
+                  }}
+                >
+                  <span style={{ fontSize: "20px" }}>★</span>
+                  <div>
+                    <strong style={{ fontSize: "12.5px", color: "var(--deep)", display: "block" }}>3. Designer Performance</strong>
+                    <small style={{ color: "var(--muted)", fontSize: "11px" }}>Lead handling & completion rates</small>
+                  </div>
+                </Link>
+
+                <Link
+                  href="/admin/reports/specialization-availability"
+                  style={{
+                    padding: "12px 14px",
+                    background: "#f8faf8",
+                    border: "1px solid var(--line)",
+                    borderRadius: "6px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    textDecoration: "none",
+                  }}
+                >
+                  <span style={{ fontSize: "20px" }}>🎨</span>
+                  <div>
+                    <strong style={{ fontSize: "12.5px", color: "var(--deep)", display: "block" }}>4. Specialization Availability</strong>
+                    <small style={{ color: "var(--muted)", fontSize: "11px" }}>Aesthetic coverage without duplication</small>
+                  </div>
+                </Link>
+
+                <Link
+                  href="/admin/reports/designer-approvals"
+                  style={{
+                    padding: "12px 14px",
+                    background: "#f8faf8",
+                    border: "1px solid var(--line)",
+                    borderRadius: "6px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    textDecoration: "none",
+                  }}
+                >
+                  <span style={{ fontSize: "20px" }}>✓</span>
+                  <div>
+                    <strong style={{ fontSize: "12.5px", color: "var(--deep)", display: "block" }}>5. Approval & Verification</strong>
+                    <small style={{ color: "var(--muted)", fontSize: "11px" }}>Queue aging & review audit trail</small>
+                  </div>
+                </Link>
+
+                <Link
+                  href="/admin/reports/monthly-growth"
+                  style={{
+                    padding: "12px 14px",
+                    background: "#f8faf8",
+                    border: "1px solid var(--line)",
+                    borderRadius: "6px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    textDecoration: "none",
+                  }}
+                >
+                  <span style={{ fontSize: "20px" }}>📈</span>
+                  <div>
+                    <strong style={{ fontSize: "12.5px", color: "var(--deep)", display: "block" }}>6. Monthly Platform Growth</strong>
+                    <small style={{ color: "var(--muted)", fontSize: "11px" }}>MoM user onboarding & enquiry trends</small>
+                  </div>
+                </Link>
+              </div>
+            </div>
           </div>
         )}
 

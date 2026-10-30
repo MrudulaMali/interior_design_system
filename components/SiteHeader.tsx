@@ -75,11 +75,14 @@ export default function SiteHeader() {
           </>
         ) : user?.role === "admin" ? (
           <>
-            <Link href="/designers">Find Designers</Link>
-            <Link href="/portfolio">Portfolio</Link>
             <Link href="/admin/dashboard" style={{ fontWeight: 700, color: "var(--green)" }}>
               Admin Dashboard
             </Link>
+            <Link href="/admin/reports" style={{ fontWeight: 600 }}>
+              Decision Reports
+            </Link>
+            <Link href="/designers">Find Designers</Link>
+            <Link href="/portfolio">Portfolio</Link>
           </>
         ) : (
           <>
