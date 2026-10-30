@@ -17,6 +17,7 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/designer/dashboard") ||
     pathname.startsWith("/designer/onboarding") ||
     pathname.startsWith("/designer/profile") ||
+    pathname.startsWith("/designer/portfolio") ||
     pathname.startsWith("/dashboard");
 
   if (isProtectedPath && !sessionToken) {
@@ -42,6 +43,7 @@ export const config = {
     "/designer/dashboard/:path*",
     "/designer/onboarding/:path*",
     "/designer/profile/:path*",
+    "/designer/portfolio/:path*",
     "/dashboard/:path*",
   ],
 };

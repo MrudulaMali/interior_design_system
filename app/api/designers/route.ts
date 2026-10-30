@@ -30,7 +30,15 @@ export async function GET(request: NextRequest) {
 
     if (service && service !== "all") {
       designers = designers.filter((d) =>
-        d.services.some((s) => s.toLowerCase().includes(service))
+        d.services.some(
+          (s) =>
+            s.toLowerCase().includes(service) ||
+            service.includes(s.toLowerCase())
+        ) ||
+        d.specializations.some((spec) =>
+          spec.toLowerCase().includes(service)
+        ) ||
+        d.style.toLowerCase().includes(service)
       );
     }
 
