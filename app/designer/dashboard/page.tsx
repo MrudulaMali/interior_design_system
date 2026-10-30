@@ -244,14 +244,14 @@ export default function DesignerDashboard() {
         </div>
 
         <Link href="/designer/dashboard" className="active">
-          <span>▦</span> Designer Workspace
+          <span>▦</span> Workspace Overview
         </Link>
 
-        <Link href="/designer/onboarding">
+        <Link href="/designer/profile">
           <span>✎</span> Edit Profile & Studio
         </Link>
 
-        <Link href="/designer/onboarding">
+        <Link href="/designer/portfolio">
           <span>🖼</span> Manage Portfolio
         </Link>
 
@@ -277,7 +277,7 @@ export default function DesignerDashboard() {
           <div className="dash-banner">
             <b>Professional Portfolio</b>
             <small>Showcase recent transformations to attract clients.</small>
-            <Link href="/designer/onboarding">Edit Profile & Portfolio →</Link>
+            <Link href="/designer/portfolio">Manage Portfolio →</Link>
           </div>
         </div>
 
@@ -341,7 +341,7 @@ export default function DesignerDashboard() {
                   Feedback from Administrator: {profile?.rejectionReason || "Please update your portfolio details and re-submit."}
                 </p>
               </div>
-              <Link href="/designer/onboarding" className="btn btn-small" style={{ fontSize: "11px", background: "#b91c1c" }}>
+              <Link href="/designer/profile" className="btn btn-small" style={{ fontSize: "11px", background: "#b91c1c" }}>
                 Edit & Re-submit
               </Link>
             </div>
@@ -365,9 +365,14 @@ export default function DesignerDashboard() {
                   Complete your studio information, add project photos, and submit for admin approval.
                 </p>
               </div>
-              <Link href="/designer/onboarding" className="btn btn-small" style={{ fontSize: "11px" }}>
-                Complete Profile →
-              </Link>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <Link href="/designer/profile" className="btn btn-small" style={{ fontSize: "11px" }}>
+                  Edit Studio Profile →
+                </Link>
+                <Link href="/designer/portfolio" className="outline-btn btn-small" style={{ fontSize: "11px" }}>
+                  Manage Portfolio →
+                </Link>
+              </div>
             </div>
           )}
         </div>
@@ -465,10 +470,10 @@ export default function DesignerDashboard() {
           >
             <div>
               <h2 style={{ margin: "0 0 4px", fontSize: "20px" }}>
-                Enquiries Assigned to You
+                Assigned Client Enquiries
               </h2>
               <p style={{ margin: 0, fontSize: "11px", color: "var(--muted)" }}>
-                Showing {filteredEnquiries.length} of {counts.total} leads
+                Showing {filteredEnquiries.length} of {counts.total} client enquiries
               </p>
             </div>
 
@@ -565,9 +570,14 @@ export default function DesignerDashboard() {
                   : "Try clearing your search query or switching the status filter."}
               </p>
               {profileStatus !== "approved" && (
-                <Link href="/designer/onboarding" className="btn btn-small" style={{ margin: "0 auto" }}>
-                  Ensure Profile is Approved →
-                </Link>
+                <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap" }}>
+                  <Link href="/designer/profile" className="btn btn-small">
+                    Edit Studio Profile →
+                  </Link>
+                  <Link href="/designer/portfolio" className="outline-btn btn-small">
+                    Manage Portfolio →
+                  </Link>
+                </div>
               )}
             </div>
           ) : (

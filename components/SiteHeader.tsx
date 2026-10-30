@@ -54,29 +54,39 @@ export default function SiteHeader() {
 
       <nav>
         <Link href="/">Home</Link>
-        <Link href="/designers">Find Designers</Link>
-        <Link href="/portfolio">Portfolio</Link>
-        <Link href="/enquiry">Enquiries</Link>
 
-        {user?.role === "admin" && (
-          <Link href="/admin/dashboard" style={{ fontWeight: 700, color: "#14594c" }}>
-            Admin Dashboard
-          </Link>
-        )}
-
-        {user?.role === "designer" && (
+        {user?.role === "designer" ? (
           <>
-            <Link href="/designer/dashboard" style={{ fontWeight: 600, color: "#14594c" }}>
-              Designer Workspace
+            <Link href="/designer/dashboard" style={{ fontWeight: 600, color: "var(--green)" }}>
+              My Workspace
             </Link>
-            <Link href="/designer/onboarding">Profile & Portfolio</Link>
+            <Link href="/designer/profile">Edit Profile & Studio</Link>
+            <Link href="/designer/portfolio">Manage Portfolio</Link>
+            <Link href="/portfolio">Portfolio</Link>
           </>
-        )}
-
-        {user?.role === "customer" && (
-          <Link href="/customer/dashboard" style={{ fontWeight: 600, color: "#14594c" }}>
-            Customer Dashboard
-          </Link>
+        ) : user?.role === "customer" ? (
+          <>
+            <Link href="/designers">Find Designers</Link>
+            <Link href="/portfolio">Portfolio</Link>
+            <Link href="/enquiry">Submit Enquiry</Link>
+            <Link href="/customer/dashboard" style={{ fontWeight: 600, color: "var(--green)" }}>
+              My Enquiries
+            </Link>
+          </>
+        ) : user?.role === "admin" ? (
+          <>
+            <Link href="/designers">Find Designers</Link>
+            <Link href="/portfolio">Portfolio</Link>
+            <Link href="/admin/dashboard" style={{ fontWeight: 700, color: "var(--green)" }}>
+              Admin Dashboard
+            </Link>
+          </>
+        ) : (
+          <>
+            <Link href="/designers">Find Designers</Link>
+            <Link href="/portfolio">Portfolio</Link>
+            <Link href="/enquiry">Enquiries</Link>
+          </>
         )}
       </nav>
 
