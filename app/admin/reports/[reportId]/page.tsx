@@ -193,13 +193,15 @@ export default function ReportDetailPage() {
       const locations = data?.locations || [];
       return {
         columns: [
-          { header: "Location / City", key: "location", width: 22 },
-          { header: "Total Designers", key: "totalDesigners", width: 16, type: "number" },
-          { header: "Approved Active", key: "approvedDesigners", width: 16, type: "number" },
-          { header: "Pending Review", key: "pendingDesigners", width: 16, type: "number" },
-          { header: "Rejected / Draft", key: "rejectedDesigners", width: 16, type: "number" },
-          { header: "Approval Rate (%)", key: "approvalPercentage", width: 18, type: "percent" },
-          { header: "Customer Enquiries", key: "assignedEnquiriesCount", width: 18, type: "number" },
+          { header: "Location / City", key: "location", width: 18 },
+          { header: "Total Designers", key: "totalDesigners", width: 14, type: "number" },
+          { header: "Approved Active", key: "approvedDesigners", width: 14, type: "number" },
+          { header: "Approved Designers (Names)", key: "approvedDesignerNames", width: 28 },
+          { header: "All Designers in City", key: "allDesignerNames", width: 30 },
+          { header: "Pending Review", key: "pendingDesigners", width: 14, type: "number" },
+          { header: "Rejected / Draft", key: "rejectedDesigners", width: 14, type: "number" },
+          { header: "Approval Rate (%)", key: "approvalPercentage", width: 16, type: "percent" },
+          { header: "Customer Enquiries", key: "assignedEnquiriesCount", width: 16, type: "number" },
         ],
         rows: locations,
         summaryCards: [
@@ -357,14 +359,17 @@ export default function ReportDetailPage() {
     const trends = data?.monthlyTrends || [];
     return {
       columns: [
-        { header: "Month", key: "monthLabel", width: 16 },
-        { header: "Customer Signups", key: "customerRegistrations", width: 18, type: "number" },
-        { header: "Designer Signups", key: "designerRegistrations", width: 18, type: "number" },
-        { header: "Designer Approvals", key: "designerApprovals", width: 18, type: "number" },
-        { header: "Enquiries Submitted", key: "enquiriesSubmitted", width: 20, type: "number" },
-        { header: "Completed Projects", key: "completedEnquiries", width: 18, type: "number" },
-        { header: "Customer MoM (%)", key: "momCustomerGrowth", width: 18, type: "percent" },
-        { header: "Enquiry MoM (%)", key: "momEnquiryGrowth", width: 18, type: "percent" },
+        { header: "Month", key: "monthLabel", width: 14 },
+        { header: "Customer Signups", key: "customerRegistrations", width: 15, type: "number" },
+        { header: "Customer Names", key: "customerNames", width: 28 },
+        { header: "Designer Signups", key: "designerRegistrations", width: 15, type: "number" },
+        { header: "Designer Names", key: "designerNames", width: 28 },
+        { header: "Designer Approvals", key: "designerApprovals", width: 15, type: "number" },
+        { header: "Approved Designer Names", key: "approvedDesignerNames", width: 28 },
+        { header: "Enquiries Submitted", key: "enquiriesSubmitted", width: 16, type: "number" },
+        { header: "Completed Projects", key: "completedEnquiries", width: 16, type: "number" },
+        { header: "Customer MoM (%)", key: "momCustomerGrowth", width: 16, type: "percent" },
+        { header: "Enquiry MoM (%)", key: "momEnquiryGrowth", width: 16, type: "percent" },
       ],
       rows: trends,
       summaryCards: [
@@ -817,6 +822,33 @@ export default function ReportDetailPage() {
                             <td key={col.key} style={{ textAlign: isRight ? "right" : "left" }}>
                               {col.type === "percent" ? (
                                 <strong>{Number(val || 0).toFixed(1)}%</strong>
+                              ) : col.key.includes("Names") ? (
+                                !val || val === "None" ? (
+                                  <span style={{ color: "var(--muted)", fontStyle: "italic", fontSize: "11px" }}>None</span>
+                                ) : (
+                                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", minWidth: "150px", maxWidth: "300px" }}>
+                                    {String(val)
+                                      .split(", ")
+                                      .map((nameItem, idx) => (
+                                        <span
+                                          key={idx}
+                                          style={{
+                                            display: "inline-block",
+                                            background: col.key.toLowerCase().includes("approved") ? "#e4f3e8" : "#f1f5f3",
+                                            color: col.key.toLowerCase().includes("approved") ? "#166534" : "#1e293b",
+                                            border: col.key.toLowerCase().includes("approved") ? "1px solid #bbf7d0" : "1px solid #e2e8f0",
+                                            borderRadius: "4px",
+                                            padding: "2px 6px",
+                                            fontSize: "11px",
+                                            fontWeight: 500,
+                                            lineHeight: 1.3,
+                                          }}
+                                        >
+                                          {nameItem}
+                                        </span>
+                                      ))}
+                                  </div>
+                                )
                               ) : col.key === "status" ? (
                                 <span
                                   style={{

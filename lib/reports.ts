@@ -22,6 +22,8 @@ export interface LocationAvailabilityItem {
   draftDesigners: number;
   approvalPercentage: number;
   assignedEnquiriesCount: number;
+  approvedDesignerNames: string;
+  allDesignerNames: string;
 }
 
 export interface Report1Data {
@@ -41,16 +43,19 @@ export interface Report1Data {
 export async function getLocationAvailabilityReport(
   filters: ReportFilterOptions = {}
 ): Promise<Report1Data> {
-  // Query all designer profiles
+  // Query all designer profiles along with user full name
   const profiles = await db
     .select({
       id: designerProfiles.id,
+      displayName: designerProfiles.displayName,
       city: designerProfiles.city,
       status: designerProfiles.status,
       serviceLocations: designerProfiles.serviceLocations,
       createdAt: designerProfiles.createdAt,
+      userFullName: users.fullName,
     })
-    .from(designerProfiles);
+    .from(designerProfiles)
+    .leftJoin(users, eq(designerProfiles.userId, users.id));
 
   // Query enquiries to see customer demand per location
   const allEnquiries = await db
@@ -78,6 +83,8 @@ export async function getLocationAvailabilityReport(
       rejected: number;
       draft: number;
       enquiries: number;
+      approvedNames: string[];
+      allNames: string[];
     }
   > = {};
 
@@ -97,6 +104,8 @@ export async function getLocationAvailabilityReport(
     else if (p.status === "pending") pendingAll++;
     else if (p.status === "rejected") rejectedAll++;
     else draftAll++;
+
+    const designerName = (p.displayName || p.userFullName || `Designer #${p.id}`).trim();
 
     // Primary city normalization
     const rawCity = (p.city || "Unknown").trim();
@@ -122,14 +131,28 @@ export async function getLocationAvailabilityReport(
           rejected: 0,
           draft: 0,
           enquiries: enquiryCountByCity[locKey] || 0,
+          approvedNames: [],
+          allNames: [],
         };
       }
 
       locMap[locKey].total++;
-      if (p.status === "approved") locMap[locKey].approved++;
-      else if (p.status === "pending") locMap[locKey].pending++;
-      else if (p.status === "rejected") locMap[locKey].rejected++;
-      else locMap[locKey].draft++;
+      if (!locMap[locKey].allNames.includes(designerName)) {
+        locMap[locKey].allNames.push(designerName);
+      }
+
+      if (p.status === "approved") {
+        locMap[locKey].approved++;
+        if (!locMap[locKey].approvedNames.includes(designerName)) {
+          locMap[locKey].approvedNames.push(designerName);
+        }
+      } else if (p.status === "pending") {
+        locMap[locKey].pending++;
+      } else if (p.status === "rejected") {
+        locMap[locKey].rejected++;
+      } else {
+        locMap[locKey].draft++;
+      }
     }
   }
 
@@ -144,6 +167,10 @@ export async function getLocationAvailabilityReport(
       approvalPercentage:
         item.total > 0 ? Number(((item.approved / item.total) * 100).toFixed(1)) : 0,
       assignedEnquiriesCount: item.enquiries,
+      approvedDesignerNames:
+        item.approvedNames.length > 0 ? item.approvedNames.join(", ") : "None",
+      allDesignerNames:
+        item.allNames.length > 0 ? item.allNames.join(", ") : "None",
     }))
     .sort((a, b) => b.approvedDesigners - a.approvedDesigners || b.totalDesigners - a.totalDesigners);
 
@@ -705,6 +732,9 @@ export interface MonthlyGrowthItem {
   totalNewUsers: number;
   momCustomerGrowth: number | null; // % MoM
   momEnquiryGrowth: number | null; // % MoM
+  customerNames: string;
+  designerNames: string;
+  approvedDesignerNames: string;
 }
 
 export interface Report6Data {
@@ -726,6 +756,7 @@ export async function getMonthlyPlatformGrowthReport(
   const usersRecords = await db
     .select({
       id: users.id,
+      fullName: users.fullName,
       role: users.role,
       createdAt: users.createdAt,
     })
@@ -734,11 +765,14 @@ export async function getMonthlyPlatformGrowthReport(
   const profilesRecords = await db
     .select({
       id: designerProfiles.id,
+      displayName: designerProfiles.displayName,
       status: designerProfiles.status,
       createdAt: designerProfiles.createdAt,
       updatedAt: designerProfiles.updatedAt,
+      userFullName: users.fullName,
     })
-    .from(designerProfiles);
+    .from(designerProfiles)
+    .leftJoin(users, eq(designerProfiles.userId, users.id));
 
   const enquiriesRecords = await db
     .select({
@@ -761,6 +795,9 @@ export async function getMonthlyPlatformGrowthReport(
       approvals: number;
       enquiries: number;
       completedEnquiries: number;
+      customerNamesList: string[];
+      designerNamesList: string[];
+      approvedDesignerNamesList: string[];
     }
   > = {};
 
@@ -776,6 +813,9 @@ export async function getMonthlyPlatformGrowthReport(
       approvals: 0,
       enquiries: 0,
       completedEnquiries: 0,
+      customerNamesList: [],
+      designerNamesList: [],
+      approvedDesignerNamesList: [],
     };
   }
 
@@ -784,8 +824,18 @@ export async function getMonthlyPlatformGrowthReport(
     const d = new Date(u.createdAt);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     if (monthMap[key]) {
-      if (u.role === "customer") monthMap[key].customers++;
-      else if (u.role === "designer") monthMap[key].designers++;
+      const uName = (u.fullName || `User #${u.id}`).trim();
+      if (u.role === "customer") {
+        monthMap[key].customers++;
+        if (!monthMap[key].customerNamesList.includes(uName)) {
+          monthMap[key].customerNamesList.push(uName);
+        }
+      } else if (u.role === "designer") {
+        monthMap[key].designers++;
+        if (!monthMap[key].designerNamesList.includes(uName)) {
+          monthMap[key].designerNamesList.push(uName);
+        }
+      }
     }
   }
 
@@ -796,6 +846,10 @@ export async function getMonthlyPlatformGrowthReport(
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       if (monthMap[key]) {
         monthMap[key].approvals++;
+        const desName = (p.displayName || p.userFullName || `Designer #${p.id}`).trim();
+        if (!monthMap[key].approvedDesignerNamesList.includes(desName)) {
+          monthMap[key].approvedDesignerNamesList.push(desName);
+        }
       }
     }
   }
@@ -857,6 +911,10 @@ export async function getMonthlyPlatformGrowthReport(
       totalNewUsers: data.customers + data.designers,
       momCustomerGrowth: momCust,
       momEnquiryGrowth: momEnq,
+      customerNames: data.customerNamesList.length > 0 ? data.customerNamesList.join(", ") : "None",
+      designerNames: data.designerNamesList.length > 0 ? data.designerNamesList.join(", ") : "None",
+      approvedDesignerNames:
+        data.approvedDesignerNamesList.length > 0 ? data.approvedDesignerNamesList.join(", ") : "None",
     });
   }
 
